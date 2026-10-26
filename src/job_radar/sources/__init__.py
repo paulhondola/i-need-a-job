@@ -5,7 +5,7 @@ Adding a company that uses a known hiring system is one line here. Its first run
 from collections.abc import Callable
 from functools import partial
 
-from job_radar.sources import beesite, greenhouse, oracle, personio, smartrecruiters, successfactors, teamtailor, workday
+from job_radar.sources import beesite, greenhouse, oracle, personio, smartrecruiters, successfactors, teamtailor, telekom, workday
 
 FETCHERS: dict[str, Callable[[], list[dict]]] = {
     "Porsche": beesite.fetch_porsche,
@@ -26,4 +26,10 @@ FETCHERS: dict[str, Callable[[], list[dict]]] = {
     "Atos": partial(successfactors.fetch, host="jobs.atos.net", company="Atos"),
     "EY": partial(successfactors.fetch, host="careers.ey.com", company="EY"),
     "Schaeffler": partial(successfactors.fetch, host="jobs.schaeffler.com", company="Schaeffler"),
+    "DRÄXLMAIER": partial(successfactors.fetch, host="d-career.org", company="DRÄXLMAIER"),
+    "NTT DATA": partial(successfactors.fetch, host="careers.nttdata.ro", company="NTT DATA"),
+    # SAP is moving to SmartRecruiters; until done, some roles stay on the old SuccessFactors site.
+    "SAP": partial(smartrecruiters.fetch, slug="SAPITBusinessSysteme", company="SAP"),
+    "SAP (old site)": partial(successfactors.fetch, host="careers.sap.com", company="SAP"),
+    "Deutsche Telekom": telekom.fetch,
 }
