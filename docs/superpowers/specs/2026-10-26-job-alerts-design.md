@@ -63,10 +63,16 @@ sites just to see if anything changed.
   `email.message`, `unicodedata`).
 - **httpx** with a shared client: 30 s timeout, browser-like User-Agent,
   `follow_redirects=True`, `raise_for_status()` on every response.
-- **One script**, `job_radar.py`, at the repo root.
-- **One fetcher function per source**, each returning a list of dicts with
-  the same shape: `{"id", "title", "company", "location", "url"}`. `id` is
-  a string, unique within that source.
+- **Package** `src/job_radar/`, run as `python -m job_radar`; tests in
+  `tests/` (layout changed by Paul's request after the first build, once the
+  list of candidate companies grew to ~85).
+- **One fetcher per hiring system** in `src/job_radar/sources/`
+  (`greenhouse.py`, `workday.py`, `oracle.py`; custom sites like Porsche's get
+  their own file), parameterized by company. The company list is
+  `FETCHERS` in `sources/__init__.py`, one line per company. Every fetcher
+  returns a list of dicts with the same shape:
+  `{"id", "title", "company", "location", "url"}`. `id` is a string, unique
+  within that source.
 - **State** in `seen.json` at the repo root, committed back by the workflow:
   `{"seen": {"<source name>": ["<id>", ...], ...}, "broken": ["<source name>", ...]}`.
 - **Location rule**, one shared helper used by every fetcher that filters
