@@ -137,3 +137,12 @@ def test_run_state_file_format(tmp_path):
     run({"OPSWAT": lambda: [job("b"), job("a")]}, path, lambda s, b: None)
     text = path.read_text()
     assert text == json.dumps(json.loads(text), indent=2, sort_keys=True, ensure_ascii=False) + "\n"
+
+from email.message import EmailMessage
+
+def test_email_subject_is_single_line_for_multiline_errors():
+    note = "Haufe check broke: Client error '403 Forbidden' for url 'x'\nFor more information check: y"
+    subject, body = format_email({}, [note])
+    assert "\n" not in subject
+    EmailMessage()["Subject"] = subject  # raises ValueError on a linefeed
+    assert "For more information check: y" in body

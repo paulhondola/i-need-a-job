@@ -69,7 +69,8 @@ def format_email(new_jobs: dict, notes: list[str]) -> tuple[str, str] | None:
         blocks.append("\n".join(lines))
     if notes:
         blocks.append("\n".join(notes))
-    return subject, "\n\n".join(blocks) + "\n"
+    # Email headers can't contain newlines; httpx error messages do.
+    return " ".join(subject.split()), "\n\n".join(blocks) + "\n"
 
 
 def send_email(subject: str, body: str) -> None:
