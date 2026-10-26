@@ -5,7 +5,8 @@ Adding a company that uses a known hiring system is one line here. Its first run
 from collections.abc import Callable
 from functools import partial
 
-from job_radar.sources import beesite, greenhouse, oracle, personio, smartrecruiters, successfactors, teamtailor, telekom, workday
+from job_radar.sources import (beesite, greenhouse, lever, oracle, personio, rinf, smartrecruiters, successfactors,
+                               teamtailor, telekom, workday)
 
 FETCHERS: dict[str, Callable[[], list[dict]]] = {
     "Porsche": beesite.fetch_porsche,
@@ -32,4 +33,8 @@ FETCHERS: dict[str, Callable[[], list[dict]]] = {
     "SAP": partial(smartrecruiters.fetch, slug="SAPITBusinessSysteme", company="SAP"),
     "SAP (old site)": partial(successfactors.fetch, host="careers.sap.com", company="SAP"),
     "Deutsche Telekom": telekom.fetch,
+    "Everseen": partial(lever.fetch, slug="everseen", company="Everseen", api_host="api.eu.lever.co"),
+    "rinf.tech": rinf.fetch,
+    # No Timișoara roles on its board today, but its R&D centre is there.
+    "Huf": partial(successfactors.fetch, host="jobs.huf-group.com", company="Huf"),
 }

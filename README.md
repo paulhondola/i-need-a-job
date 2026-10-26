@@ -9,7 +9,7 @@ Checks employers' careers APIs every 3 hours for Timișoara roles and emails the
 ## Layout
 
 - `src/job_radar/sources/__init__.py`: the company list, one line per company.
-- `src/job_radar/sources/<system>.py`: one fetcher per hiring system (Greenhouse, Workday, Oracle) or custom site (BeeSite for Porsche). Each returns `{id, title, company, location, url}` dicts.
+- `src/job_radar/sources/<system>.py`: one fetcher per hiring system (Greenhouse, Workday, Oracle, SuccessFactors, ...) or custom site (Porsche, Telekom, rinf.tech). Each returns `{id, title, company, location, url}` dicts.
 - `src/job_radar/state.py`: Timișoara matching and the "what's new" diff. `mailer.py`: the email. `runner.py`: one run.
 
 ## Changing companies
@@ -19,3 +19,4 @@ Checks employers' careers APIs every 3 hours for Timișoara roles and emails the
 - Changed a company's filter? Delete its key from `seen.json` in the same commit so it re-seeds silently.
 - A company that starts failing gets one "check broke" email and one "recovered" email; it's listed under `broken` in `seen.json` meanwhile.
 - Pending: Haufe (its job board's search API rejects requests right now).
+- Not tracked: Nagarro and Hella (job data only via a token taken from their page), Cognizant, Infosys, ACI Worldwide, SafeFleet (block scripted requests), Luxoft (no Timișoara roles listed).

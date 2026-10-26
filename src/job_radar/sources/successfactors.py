@@ -9,6 +9,9 @@ def fetch(host: str, company: str) -> list[dict]:
     """SAP SuccessFactors career sites (e.g. careers.te.com). Titles look like "Process Engineer (TIMISOARA, TM, RO, 307160)"."""
     # Keyword search, then filter on the title's location. The feed returns 20 items unless "rows" is raised.
     feed = HTTP.get(f"https://{host}/services/rss/job/", params={"locale": "en_US", "keywords": "Timisoara", "rows": 500}).raise_for_status().text
+    # The zero-results feed is a placeholder item, sometimes with a raw "&" (Huf) that breaks the XML parse.
+    if "<title>No jobs currently available" in feed:
+        return []
     jobs = []
     for item in ET.fromstring(feed).iter("item"):
         title, link = item.findtext("title").strip(), item.findtext("link").strip()
