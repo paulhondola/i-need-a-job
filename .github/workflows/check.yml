@@ -1,0 +1,24 @@
+name: check jobs
+on:
+  schedule: [{ cron: "0 */3 * * *" }]
+  workflow_dispatch:
+concurrency: { group: check-jobs, cancel-in-progress: false }
+permissions: { contents: write }
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+      - run: uv run --locked pytest -q
+      - run: uv run --locked job_radar.py
+        env:
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+      - name: commit seen.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add seen.json
+          git diff --cached --quiet || { git commit -m "seen: update" && git push; }
