@@ -10,7 +10,8 @@ def fetch(host: str, tenant: str, site: str, company: str) -> list[dict]:
     # Raises KeyError/StopIteration if Workday changes the facet shape (better than silently returning []).
     group = next(f for f in facets if f["facetParameter"] == "locationMainGroup")
     locations = next(g for g in group["values"] if g["facetParameter"] == "locations")["values"]
-    ids = [v["id"] for v in locations if matches_timisoara(v["descriptor"])]
+    matched = [v for v in locations if matches_timisoara(v["descriptor"])]
+    ids = [v["id"] for v in matched]
     if not ids:
         return []
     body["appliedFacets"] = {"locations": ids}
@@ -22,7 +23,7 @@ def fetch(host: str, tenant: str, site: str, company: str) -> list[dict]:
                 "id": p["externalPath"].rsplit("_", 1)[-1],
                 "title": p["title"],
                 "company": company,
-                "location": p["locationsText"],
+                "location": p.get("locationsText") or "; ".join(v["descriptor"] for v in matched),
                 "url": f"https://{host}/{site}{p['externalPath']}",
             })
         body["offset"] += 20

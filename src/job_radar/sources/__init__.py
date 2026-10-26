@@ -5,7 +5,7 @@ Adding a company that uses a known hiring system is one line here. Its first run
 from collections.abc import Callable
 from functools import partial
 
-from job_radar.sources import beesite, greenhouse, oracle, personio, smartrecruiters, workday
+from job_radar.sources import beesite, greenhouse, oracle, personio, smartrecruiters, successfactors, teamtailor, workday
 
 FETCHERS: dict[str, Callable[[], list[dict]]] = {
     "Porsche": beesite.fetch_porsche,
@@ -19,4 +19,11 @@ FETCHERS: dict[str, Callable[[], list[dict]]] = {
                           job_url="https://jobs.manage-now.de/job.php?id={id}"),
     # d.velop links jobs by title slug, not id: point at the listing.
     "d.velop": partial(personio.fetch, slug="d-velop", company="d.velop", job_url="https://karriere.d-velop.de/stellenanzeigen/"),
+    "Bosch": partial(smartrecruiters.fetch, slug="BoschGroup", company="Bosch"),
+    "Accenture": partial(workday.fetch, host="accenture.wd103.myworkdayjobs.com", tenant="accenture", site="AccentureCareers", company="Accenture"),
+    "TE Connectivity": partial(successfactors.fetch, host="careers.te.com", company="TE Connectivity"),
+    "Visma": partial(teamtailor.fetch, slug="vismacc", company="Visma"),
+    "Atos": partial(successfactors.fetch, host="jobs.atos.net", company="Atos"),
+    "EY": partial(successfactors.fetch, host="careers.ey.com", company="EY"),
+    "Schaeffler": partial(successfactors.fetch, host="jobs.schaeffler.com", company="Schaeffler"),
 }
