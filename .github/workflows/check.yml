@@ -10,6 +10,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: main  # latest seen.json, not the trigger-time commit (re-runs and long-queued runs)
       - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
       - run: uv run --locked pytest -q
       - run: uv run --locked python -m job_radar
