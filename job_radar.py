@@ -10,6 +10,8 @@ from collections.abc import Callable
 from email.message import EmailMessage
 from pathlib import Path
 
+import httpx
+
 
 def matches_timisoara(location: str) -> bool:
     # NFKD splits both ș (comma) and ş (cedilla) into "s" + a combining mark.
@@ -80,7 +82,81 @@ def send_email(subject: str, body: str) -> None:
         smtp.send_message(msg)
 
 
-FETCHERS: dict[str, Callable[[], list[dict]]] = {}
+HTTP = httpx.Client(
+    timeout=30,
+    headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36"},
+    follow_redirects=True,
+)
+
+
+def fetch_porsche() -> list[dict]:
+    query = {
+        "LanguageCode": "EN",
+        "SearchParameters": {
+            "FirstItem": 1,
+            "CountItem": 500,
+            "MatchedObjectDescriptor": ["ID", "PositionTitle", "PositionURI", "PositionLocation.CityName", "ParentOrganizationName"],
+        },
+        # 176 = Romania, 311 = Timișoara, channel 12 = public board (from jobs.porsche.com search URL)
+        "SearchCriteria": [
+            {"CriterionName": "PositionLocation.Country", "CriterionValue": ["176"]},
+            {"CriterionName": "PositionLocation.City", "CriterionValue": ["311"]},
+            {"CriterionName": "PublicationChannel.Code", "CriterionValue": ["12"]},
+        ],
+    }
+    data = HTTP.get("https://porsche-beesite-production-gjb.app.beesite.de/search/", params={"data": json.dumps(query)}).raise_for_status().json()
+    return [
+        {
+            "id": str(d["ID"]),
+            "title": d["PositionTitle"],
+            "company": d["ParentOrganizationName"],
+            "location": d["PositionLocation"][0]["CityName"],
+            "url": d["PositionURI"],
+        }
+        for d in (item["MatchedObjectDescriptor"] for item in data["SearchResult"]["SearchResultItems"])
+    ]
+
+
+def fetch_opswat() -> list[dict]:
+    data = HTTP.get("https://boards-api.greenhouse.io/v1/boards/opswat/jobs").raise_for_status().json()
+    return [
+        {"id": str(j["id"]), "title": j["title"], "company": "OPSWAT", "location": j["location"]["name"], "url": j["absolute_url"]}
+        for j in data["jobs"]
+        if any(matches_timisoara(part) for part in j["location"]["name"].split(";"))
+    ]
+
+
+def fetch_nokia() -> list[dict]:
+    url = "https://fa-evmr-saasfaprod1.fa.ocs.oraclecloud.com/hcmRestApi/resources/latest/recruitingCEJobRequisitions"
+    jobs, offset = [], 0
+    while True:
+        params = {
+            "onlyData": "true",
+            "expand": "requisitionList.secondaryLocations",
+            "finder": f"findReqs;siteNumber=CX_1,limit=200,offset={offset},sortBy=POSTING_DATES_DESC",
+        }
+        page = HTTP.get(url, params=params).raise_for_status().json()["items"][0]
+        rows = page["requisitionList"]
+        for r in rows:
+            locations = [r["PrimaryLocation"]] + [s["Name"] for s in r.get("secondaryLocations", [])]
+            if any(matches_timisoara(loc) for loc in locations):
+                jobs.append({
+                    "id": str(r["Id"]),
+                    "title": r["Title"],
+                    "company": "Nokia",
+                    "location": "; ".join(locations),
+                    "url": f"https://jobs.nokia.com/en/sites/CX_1/job/{r['Id']}",
+                })
+        offset += len(rows)
+        if not rows or offset >= page["TotalJobsCount"]:
+            return jobs
+
+
+FETCHERS: dict[str, Callable[[], list[dict]]] = {
+    "Porsche": fetch_porsche,
+    "OPSWAT": fetch_opswat,
+    "Nokia": fetch_nokia,
+}
 
 
 def run(fetchers: dict, state_path: Path, send: Callable[[str, str], None], save: bool = True) -> int:
