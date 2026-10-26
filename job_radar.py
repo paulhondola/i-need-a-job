@@ -1,9 +1,14 @@
 """Check employers' careers APIs for new Timișoara jobs and email the new ones."""
+import argparse
 import copy
+import json
 import os
 import smtplib
+import sys
 import unicodedata
+from collections.abc import Callable
 from email.message import EmailMessage
+from pathlib import Path
 
 
 def matches_timisoara(location: str) -> bool:
@@ -73,3 +78,43 @@ def send_email(subject: str, body: str) -> None:
     with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=30) as smtp:
         smtp.login(user, os.environ["SMTP_PASS"])
         smtp.send_message(msg)
+
+
+FETCHERS: dict[str, Callable[[], list[dict]]] = {}
+
+
+def run(fetchers: dict, state_path: Path, send: Callable[[str, str], None], save: bool = True) -> int:
+    state = json.loads(state_path.read_text()) if state_path.exists() else {"seen": {}, "broken": []}
+    results = {}
+    for source, fetch in fetchers.items():
+        try:
+            results[source] = fetch()
+        except Exception as e:  # one broken site must not stop the others
+            print(f"{source}: {e!r}", file=sys.stderr)
+            results[source] = e
+    state, new_jobs, notes = update_state(state, results)
+    for source, result in results.items():
+        if not isinstance(result, Exception):
+            print(f"{source}: {len(result)} jobs, {len(new_jobs.get(source, []))} new")
+    email = format_email(new_jobs, notes)
+    if email:
+        try:
+            send(*email)
+        except Exception as e:
+            print(f"sending email failed, state not saved: {e!r}", file=sys.stderr)
+            return 1
+    if save:
+        state_path.write_text(json.dumps(state, indent=2, sort_keys=True, ensure_ascii=False) + "\n")
+    return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--dry-run", action="store_true", help="print the email instead of sending; don't save state")
+    args = parser.parse_args()
+    send = (lambda subject, body: print(f"Subject: {subject}\n\n{body}")) if args.dry_run else send_email
+    return run(FETCHERS, Path(__file__).with_name("seen.json"), send, save=not args.dry_run)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
