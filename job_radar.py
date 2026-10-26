@@ -152,10 +152,38 @@ def fetch_nokia() -> list[dict]:
             return jobs
 
 
+def fetch_intel() -> list[dict]:
+    url = "https://intel.wd1.myworkdayjobs.com/wday/cxs/intel/External/jobs"
+    body = {"appliedFacets": {}, "limit": 20, "offset": 0, "searchText": ""}
+    facets = HTTP.post(url, json=body).raise_for_status().json()["facets"]
+    # Raises KeyError/StopIteration if Workday changes the facet shape (better than silently returning []).
+    group = next(f for f in facets if f["facetParameter"] == "locationMainGroup")
+    locations = next(g for g in group["values"] if g["facetParameter"] == "locations")["values"]
+    ids = [v["id"] for v in locations if matches_timisoara(v["descriptor"])]
+    if not ids:
+        return []
+    body["appliedFacets"] = {"locations": ids}
+    jobs = []
+    while True:
+        page = HTTP.post(url, json=body).raise_for_status().json()
+        for p in page["jobPostings"]:
+            jobs.append({
+                "id": p["externalPath"].rsplit("_", 1)[-1],
+                "title": p["title"],
+                "company": "Intel",
+                "location": p["locationsText"],
+                "url": "https://intel.wd1.myworkdayjobs.com/External" + p["externalPath"],
+            })
+        body["offset"] += 20
+        if not page["jobPostings"] or body["offset"] >= page["total"]:
+            return jobs
+
+
 FETCHERS: dict[str, Callable[[], list[dict]]] = {
     "Porsche": fetch_porsche,
     "OPSWAT": fetch_opswat,
     "Nokia": fetch_nokia,
+    "Intel": fetch_intel,
 }
 
 
