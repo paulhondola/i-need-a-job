@@ -19,4 +19,4 @@ Checks employers' careers APIs every 3 hours for Timișoara roles and emails the
 - Changed a company's filter? Delete its key from `seen.json` in the same commit so it re-seeds silently.
 - A company that starts failing gets one "check broke" email and one "recovered" email; it's listed under `broken` in `seen.json` meanwhile.
 - Pending: Haufe (its job board's search API rejects requests right now).
-- Not tracked: Nagarro and Hella (job data only via a token taken from their page), Cognizant, Infosys, ACI Worldwide, SafeFleet (block scripted requests), Luxoft (no Timișoara roles listed).
+- Not tracked: Nagarro and Hella (job data only via a token taken from their page), Cognizant, Infosys, SafeFleet (block scripted requests), Luxoft (no Timișoara roles listed).
