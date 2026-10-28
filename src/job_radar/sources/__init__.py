@@ -35,6 +35,7 @@ FETCHERS: dict[str, Callable[[], list[dict]]] = {
     "Deutsche Telekom": telekom.fetch,
     "Everseen": partial(lever.fetch, slug="everseen", company="Everseen", api_host="api.eu.lever.co"),
     "rinf.tech": rinf.fetch,
+    "Nagarro": partial(smartrecruiters.fetch, slug="Nagarro1", company="Nagarro"),
     "ACI Worldwide": partial(oracle.fetch, api_host="ebwg.fa.us2.oraclecloud.com", site="CX",
                              job_url_prefix="https://ebwg.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX/job/",
                              company="ACI Worldwide"),
