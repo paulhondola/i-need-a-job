@@ -9,7 +9,8 @@ def fetch(slug: str, company: str) -> list[dict]:
     while True:
         page = HTTP.get(url, params={"country": "ro", "limit": 100, "offset": offset}).raise_for_status().json()
         for p in page["content"]:
-            if matches_timisoara(p["location"].get("city") or ""):
+            # Remote roles count too: the query is already limited to Romania.
+            if p["location"].get("remote") or matches_timisoara(p["location"].get("city") or ""):
                 jobs.append({
                     "id": p["id"],
                     "title": p["name"],
