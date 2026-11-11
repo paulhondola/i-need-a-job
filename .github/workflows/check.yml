@@ -1,6 +1,6 @@
 name: check jobs
 on:
-  schedule: [{ cron: "0 */3 * * *" }]
+  schedule: [{ cron: "0 8 * * *" }]
   workflow_dispatch:
 concurrency: { group: check-jobs, cancel-in-progress: false }
 permissions: { contents: write }
