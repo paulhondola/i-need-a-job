@@ -1,5 +1,7 @@
 {
-  "broken": [],
+  "broken": [
+    "Intel"
+  ],
   "seen": {
     "ACI Worldwide": [
       "17608",
