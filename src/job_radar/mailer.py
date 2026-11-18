@@ -3,18 +3,18 @@ import smtplib
 from email.message import EmailMessage
 
 
-def format_email(new_jobs: dict, notes: list[str]) -> tuple[str, str] | None:
+def format_email(jobs_by_source: dict, notes: list[str]) -> tuple[str, str] | None:
     """Build (subject, body) grouped by company, or None when there is nothing to say."""
-    if not new_jobs and not notes:
+    if not jobs_by_source and not notes:
         return None
     by_company: dict[str, list[dict]] = {}
-    for jobs in new_jobs.values():
+    for jobs in jobs_by_source.values():
         for j in jobs:
             by_company.setdefault(j["company"], []).append(j)
     companies = sorted(by_company)
     count = sum(len(v) for v in by_company.values())
     if count:
-        subject = f"{count} new job{'s' if count != 1 else ''}: {', '.join(companies)}"
+        subject = f"{count} job{'s' if count != 1 else ''}: {', '.join(companies)}"
     else:
         subject = "job alert: " + "; ".join(notes)
     blocks = []

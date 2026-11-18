@@ -3,25 +3,16 @@ on:
   schedule: [{ cron: "0 8 * * *" }]
   workflow_dispatch:
 concurrency: { group: check-jobs, cancel-in-progress: false }
-permissions: { contents: write }
 jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
-        with:
-          ref: main  # latest seen.json, not the trigger-time commit (re-runs and long-queued runs)
       - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
       - run: uv run --locked pytest -q
       - run: uv run --locked python -m job_radar
         env:
           SMTP_USER: ${{ secrets.SMTP_USER }}
           SMTP_PASS: ${{ secrets.SMTP_PASS }}
-      - name: commit seen.json
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add seen.json
-          # rebase first: a push that landed mid-run must not make us lose seen.json (= re-alert next run)
-          git diff --cached --quiet || { git commit -m "seen: update" && git pull --rebase && git push; }
+

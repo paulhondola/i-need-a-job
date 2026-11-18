@@ -1,6 +1,6 @@
-"""The companies to watch. One entry per company; the key is its name in seen.json and in emails.
+"""The companies to watch. One entry per company; the key is its source name.
 
-Adding a company that uses a known hiring system is one line here. Its first run is silent.
+Adding a company that uses a known hiring system is one line here.
 """
 from collections.abc import Callable
 from functools import partial

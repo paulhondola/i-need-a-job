@@ -1,1 +1,2 @@
-"""Check employers' careers APIs for new Timișoara jobs and email the new ones."""
+"""Check employers' careers APIs for Timișoara jobs and email the current offers."""
+
