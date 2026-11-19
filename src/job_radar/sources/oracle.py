@@ -15,15 +15,19 @@ def fetch(api_host: str, site: str, job_url_prefix: str, company: str) -> list[d
         page = HTTP.get(url, params=params).raise_for_status().json()["items"][0]
         rows = page["requisitionList"]
         for r in rows:
-            locations = [r["PrimaryLocation"]] + [s["Name"] for s in r.get("secondaryLocations", [])]
+            locations = [r["PrimaryLocation"]] + [
+                s["Name"] for s in r.get("secondaryLocations", [])
+            ]
             if any(matches_timisoara(loc) for loc in locations):
-                jobs.append({
-                    "id": str(r["Id"]),
-                    "title": r["Title"],
-                    "company": company,
-                    "location": "; ".join(locations),
-                    "url": f"{job_url_prefix}{r['Id']}",
-                })
+                jobs.append(
+                    {
+                        "id": str(r["Id"]),
+                        "title": r["Title"],
+                        "company": company,
+                        "location": "; ".join(locations),
+                        "url": f"{job_url_prefix}{r['Id']}",
+                    }
+                )
         offset += len(rows)
         if not rows or offset >= page["TotalJobsCount"]:
             return jobs

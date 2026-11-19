@@ -17,7 +17,9 @@ def _format_tier_block(header: str, jobs: list[dict]) -> str:
     return "\n\n".join(blocks)
 
 
-def format_email(tiered_jobs: dict[str, list[dict]], notes: list[str]) -> tuple[str, str] | None:
+def format_email(
+    tiered_jobs: dict[str, list[dict]], notes: list[str]
+) -> tuple[str, str] | None:
     """Build (subject, body) grouped by tier then company, or None when there is nothing to say."""
     best = tiered_jobs.get("best", [])
     other = tiered_jobs.get("other", [])
@@ -30,7 +32,9 @@ def format_email(tiered_jobs: dict[str, list[dict]], notes: list[str]) -> tuple[
     elif best:
         subject = f"{len(best)} best job{'s' if len(best) != 1 else ''}: {', '.join(companies)}"
     elif other:
-        subject = f"{len(other)} job{'s' if len(other) != 1 else ''}: {', '.join(companies)}"
+        subject = (
+            f"{len(other)} job{'s' if len(other) != 1 else ''}: {', '.join(companies)}"
+        )
     else:
         subject = "job alert: " + "; ".join(notes)
 
@@ -38,7 +42,9 @@ def format_email(tiered_jobs: dict[str, list[dict]], notes: list[str]) -> tuple[
     if best:
         blocks.append(_format_tier_block(f"=== BEST MATCHES ({len(best)}) ===", best))
     if other:
-        blocks.append(_format_tier_block(f"=== OTHER TECH ROLES ({len(other)}) ===", other))
+        blocks.append(
+            _format_tier_block(f"=== OTHER TECH ROLES ({len(other)}) ===", other)
+        )
     if notes:
         blocks.append("\n".join(notes))
     # Email headers can't contain newlines; httpx error messages do.

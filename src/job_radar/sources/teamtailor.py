@@ -12,12 +12,14 @@ def fetch(slug: str, company: str) -> list[dict]:
     for item in ET.fromstring(feed).iter("item"):
         cities = [c.text or "" for c in item.iter(f"{TT}city")]
         if any(matches_timisoara(c) for c in cities):
-            link = item.findtext("link")
-            jobs.append({
-                "id": link.rsplit("/", 1)[-1].split("-", 1)[0],
-                "title": item.findtext("title"),
-                "company": company,
-                "location": "; ".join(cities),
-                "url": link,
-            })
+            link = item.findtext("link", "")
+            jobs.append(
+                {
+                    "id": link.rsplit("/", 1)[-1].split("-", 1)[0],
+                    "title": item.findtext("title"),
+                    "company": company,
+                    "location": "; ".join(cities),
+                    "url": link,
+                }
+            )
     return jobs

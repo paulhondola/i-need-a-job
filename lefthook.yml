@@ -1,0 +1,15 @@
+pre-commit:
+  piped: true
+  jobs:
+    - name: lint
+      glob: "*.py"
+      run: uv run ruff check --fix {staged_files}
+      stage_fixed: true
+    - name: format
+      glob: "*.py"
+      run: uv run ruff format {staged_files}
+      stage_fixed: true
+    - name: typecheck
+      run: uv run pyrefly check
+    - name: test
+      run: uv run pytest -q

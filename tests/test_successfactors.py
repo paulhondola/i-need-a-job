@@ -10,6 +10,8 @@ EMPTY_FEED = """<?xml version="1.0" encoding="UTF-8" ?><rss version='2.0'><chann
 
 
 def test_no_jobs_placeholder_feed_is_empty_not_broken(monkeypatch):
-    client = httpx.Client(transport=httpx.MockTransport(lambda req: httpx.Response(200, text=EMPTY_FEED)))
+    client = httpx.Client(
+        transport=httpx.MockTransport(lambda req: httpx.Response(200, text=EMPTY_FEED))
+    )
     monkeypatch.setattr(successfactors, "HTTP", client)
     assert successfactors.fetch(host="jobs.huf-group.com", company="Huf") == []

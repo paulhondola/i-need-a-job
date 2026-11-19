@@ -9,7 +9,13 @@ def fetch_porsche() -> list[dict]:
         "SearchParameters": {
             "FirstItem": 1,
             "CountItem": 500,
-            "MatchedObjectDescriptor": ["ID", "PositionTitle", "PositionURI", "PositionLocation.CityName", "ParentOrganizationName"],
+            "MatchedObjectDescriptor": [
+                "ID",
+                "PositionTitle",
+                "PositionURI",
+                "PositionLocation.CityName",
+                "ParentOrganizationName",
+            ],
         },
         # 176 = Romania, 311 = Timișoara, channel 12 = public board (from jobs.porsche.com search URL)
         "SearchCriteria": [
@@ -18,7 +24,14 @@ def fetch_porsche() -> list[dict]:
             {"CriterionName": "PublicationChannel.Code", "CriterionValue": ["12"]},
         ],
     }
-    data = HTTP.get("https://porsche-beesite-production-gjb.app.beesite.de/search/", params={"data": json.dumps(query)}).raise_for_status().json()
+    data = (
+        HTTP.get(
+            "https://porsche-beesite-production-gjb.app.beesite.de/search/",
+            params={"data": json.dumps(query)},
+        )
+        .raise_for_status()
+        .json()
+    )
     return [
         {
             "id": str(d["ID"]),
@@ -27,5 +40,8 @@ def fetch_porsche() -> list[dict]:
             "location": d["PositionLocation"][0]["CityName"],
             "url": d["PositionURI"],
         }
-        for d in (item["MatchedObjectDescriptor"] for item in data["SearchResult"]["SearchResultItems"])
+        for d in (
+            item["MatchedObjectDescriptor"]
+            for item in data["SearchResult"]["SearchResultItems"]
+        )
     ]

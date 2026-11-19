@@ -112,13 +112,12 @@ def test_regex_prefilter_drops_excluded_roles(title):
 
 
 def test_llm_filter_empty_jobs_skips_http(monkeypatch):
-    monkeypatch.delenv("GROQ_API_KEY", raising=False)
     monkeypatch.delenv("LLM_API_KEY", raising=False)
     assert llm_filter([], "prefs") == {"best": [], "other": []}
 
 
 def test_llm_filter_classifies_and_deduplicates_indices(monkeypatch):
-    monkeypatch.setenv("GROQ_API_KEY", "test-key")
+    monkeypatch.setenv("LLM_API_KEY", "test-key")
     calls = []
 
     def fake_post(url, *, headers, json, timeout):
@@ -169,7 +168,6 @@ def test_llm_filter_chunks_over_200_jobs(monkeypatch):
 
 
 def test_filter_jobs_zero_survivors_skips_llm_and_preferences(monkeypatch, tmp_path, capsys):
-    monkeypatch.delenv("GROQ_API_KEY", raising=False)
     monkeypatch.delenv("LLM_API_KEY", raising=False)
     j_drop = titled_job("1", "Senior HR Manager", "Nokia")
 
@@ -180,7 +178,6 @@ def test_filter_jobs_zero_survivors_skips_llm_and_preferences(monkeypatch, tmp_p
 
 
 def test_filter_jobs_fallback_when_api_key_missing(monkeypatch, capsys):
-    monkeypatch.delenv("GROQ_API_KEY", raising=False)
     monkeypatch.delenv("LLM_API_KEY", raising=False)
     j_keep = titled_job("1", "Python Intern", "Nokia")
     j_drop = titled_job("2", "Senior HR Manager", "Nokia")
@@ -193,7 +190,7 @@ def test_filter_jobs_fallback_when_api_key_missing(monkeypatch, capsys):
 
 
 def test_filter_jobs_fallback_on_malformed_llm_json(monkeypatch):
-    monkeypatch.setenv("GROQ_API_KEY", "test-key")
+    monkeypatch.setenv("LLM_API_KEY", "test-key")
 
     def fake_post(url, *, headers, json, timeout):
         return httpx.Response(
@@ -223,7 +220,7 @@ Expected: FAIL with `ModuleNotFoundError: No module named 'job_radar.filter'`
 
 - [ ] **Step 4: Implement `src/job_radar/filter.py`**
 
-Implement `DEFAULT_PREFERENCES_PATH`, `_DROP_RE`, `regex_prefilter`, `llm_filter`, and `filter_jobs` per the spec (`docs/superpowers/specs/2026-11-19-job-filtering-design.md`, Section "Module Responsibilities -> 2. `src/job_radar/filter.py`"). Use `HTTP.post(..., timeout=30)` and `.raise_for_status()`. Raise `RuntimeError("GROQ_API_KEY or LLM_API_KEY not set")` in `llm_filter` when neither env var is set and `jobs` is non-empty.
+Implement `DEFAULT_PREFERENCES_PATH`, `_DROP_RE`, `regex_prefilter`, `llm_filter`, and `filter_jobs` per the spec (`docs/superpowers/specs/2026-11-19-job-filtering-design.md`, Section "Module Responsibilities -> 2. `src/job_radar/filter.py`"). Use `HTTP.post(..., timeout=30)` and `.raise_for_status()`. Raise `RuntimeError("LLM_API_KEY not set")` in `llm_filter` when neither env var is set and `jobs` is non-empty.
 
 - [ ] **Step 5: Run tests to verify they pass**
 
@@ -373,7 +370,6 @@ def test_run_filters_and_tiers_jobs(monkeypatch):
 
 
 def test_run_falls_back_when_llm_key_missing(monkeypatch):
-    monkeypatch.delenv("GROQ_API_KEY", raising=False)
     monkeypatch.delenv("LLM_API_KEY", raising=False)
     sent = []
     assert run({"OPSWAT": lambda: [job("1", "OPSWAT"), {**job("2", "OPSWAT"), "title": "Senior HR Manager"}]},
@@ -404,7 +400,6 @@ def test_run_smtp_failure_exits_nonzero(monkeypatch):
 
 
 def test_run_nothing_to_send(monkeypatch):
-    monkeypatch.delenv("GROQ_API_KEY", raising=False)
     monkeypatch.delenv("LLM_API_KEY", raising=False)
     sent = []
     assert run({"OPSWAT": lambda: []}, lambda s, b: sent.append(s)) == 0
@@ -424,7 +419,7 @@ In `src/job_radar/runner.py`:
 - Pass `tiered_jobs, notes` to `format_email(tiered_jobs, notes)`.
 
 In `.github/workflows/check.yml`:
-- Add `GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}` under `env:` for the `uv run --locked python -m job_radar` step.
+- Add `LLM_API_KEY: ${{ secrets.LLM_API_KEY }}` under `env:` for the `uv run --locked python -m job_radar` step.
 
 In `README.md`:
 - Mention `GROQ_API_KEY` (and optional `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL`), `preferences.md`, and `src/job_radar/filter.py` in the Secrets and Layout bullets.

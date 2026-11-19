@@ -5,7 +5,7 @@ requires-python = ">=3.12"
 dependencies = ["httpx"]
 
 [dependency-groups]
-dev = ["pytest"]
+dev = ["pyrefly", "pytest", "ruff"]
 
 [build-system]
 requires = ["hatchling"]
@@ -13,3 +13,7 @@ build-backend = "hatchling.build"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.pyrefly]
+project-includes = ["src", "tests"]
+search-path = ["src", "tests"]

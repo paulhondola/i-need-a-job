@@ -4,7 +4,7 @@ Checks employers' careers APIs every day for Timișoara roles and emails the cur
 
 - Run tests: `uv run pytest`
 - Try it locally without sending: `uv run python -m job_radar --dry-run`
-- Secrets: `SMTP_USER` (your Gmail address), `SMTP_PASS` (a Gmail App Password), and `GROQ_API_KEY` (for LLM preference tiering; falls back to regex-only filtering with an error note if missing). Optional provider overrides: `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL`.
+- Secrets: `SMTP_USER` (your Gmail address), `SMTP_PASS` (a Gmail App Password), and `LLM_API_KEY` (for LLM preference tiering; falls back to regex-only filtering with an error note if missing). Optional provider overrides: `LLM_BASE_URL`, `LLM_MODEL`. For local runs, put them in `.env` (gitignored) or export them in your shell.
 
 ## Layout
 
@@ -20,4 +20,3 @@ Checks employers' careers APIs every day for Timișoara roles and emails the cur
 - A company that fails during a run is noted at the bottom of that day's email (`<source> check broke: ...`).
 - Pending: Haufe (its job board's search API rejects requests right now).
 - Not tracked: Hella (its job list loads only through a session-token API; its site offers its own "Create an alert" emails), Cognizant, Infosys, SafeFleet (block scripted requests), Luxoft (no Timișoara roles listed).
-

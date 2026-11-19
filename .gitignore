@@ -3,6 +3,7 @@ __pycache__/
 .pytest_cache/
 .claude/
 .remember/
+.env
 
 # MacOS
 .DS_Store
