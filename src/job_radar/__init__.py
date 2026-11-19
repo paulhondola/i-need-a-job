@@ -1,1 +1,1 @@
-"""Check employers' careers APIs for Timișoara jobs and email the current offers."""
+"""Check employers' careers APIs for Romanian jobs (default: Timișoara) and email the current offers."""

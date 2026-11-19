@@ -3,9 +3,10 @@
 Adding a company that uses a known hiring system is one line here.
 """
 
-from collections.abc import Callable
 from functools import partial
+from typing import Protocol
 
+from job_radar.cities import DEFAULT_CITY_FILTER, CityFilter
 from job_radar.sources import (
     beesite,
     greenhouse,
@@ -20,7 +21,14 @@ from job_radar.sources import (
     workday,
 )
 
-FETCHERS: dict[str, Callable[[], list[dict]]] = {
+
+class Fetcher(Protocol):
+    def __call__(
+        self, *, city_filter: CityFilter = DEFAULT_CITY_FILTER
+    ) -> list[dict]: ...
+
+
+FETCHERS: dict[str, Fetcher] = {
     "Porsche": beesite.fetch_porsche,
     "OPSWAT": partial(greenhouse.fetch, board="opswat", company="OPSWAT"),
     "Nokia": partial(

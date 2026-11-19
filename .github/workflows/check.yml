@@ -2,6 +2,12 @@ name: check jobs
 on:
   schedule: [{ cron: "0 8 * * *" }]
   workflow_dispatch:
+    inputs:
+      city:
+        description: "Comma-separated Romanian cities or 'all' (overrides CITIES variable)"
+        required: false
+        default: ""
+        type: string
 permissions: { contents: read }
 concurrency: { group: check-jobs, cancel-in-progress: false }
 jobs:
@@ -12,10 +18,17 @@ jobs:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
       - run: uv run --locked pytest -q
-      - run: uv run --locked python -m job_radar
+      - name: Run job radar
         env:
+          CITIES: ${{ inputs.city || vars.CITIES }}
           SMTP_USER: ${{ secrets.SMTP_USER }}
           SMTP_PASS: ${{ secrets.SMTP_PASS }}
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           LLM_BASE_URL: ${{ vars.LLM_BASE_URL }}
           LLM_MODEL: ${{ vars.LLM_MODEL }}
+        run: |
+          if [ -n "$CITIES" ]; then
+            uv run --locked python -m job_radar --city "$CITIES"
+          else
+            uv run --locked python -m job_radar
+          fi

@@ -18,7 +18,7 @@ def _format_tier_block(header: str, jobs: list[dict]) -> str:
 
 
 def format_email(
-    tiered_jobs: dict[str, list[dict]], notes: list[str]
+    tiered_jobs: dict[str, list[dict]], notes: list[str], city_label: str = ""
 ) -> tuple[str, str] | None:
     """Build (subject, body) grouped by tier then company, or None when there is nothing to say."""
     best = tiered_jobs.get("best", [])
@@ -37,6 +37,8 @@ def format_email(
         )
     else:
         subject = "job alert: " + "; ".join(notes)
+    if city_label:
+        subject = f"[{city_label}] {subject}"
 
     blocks = []
     if best:

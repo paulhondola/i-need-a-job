@@ -85,3 +85,31 @@ def test_email_subject_is_single_line_for_multiline_errors():
     assert "\n" not in subject
     EmailMessage()["Subject"] = subject
     assert "For more information check: y" in body
+
+
+def test_email_prefixes_subject_with_city_label():
+    subject, _ = _format_present(
+        {"best": [job("1", "Nokia")], "other": [job("2", "Bosch")]},
+        [],
+    )
+    assert subject == "1 best, 1 other jobs: Bosch, Nokia"
+
+    email1 = format_email(
+        {"best": [job("1", "Nokia")], "other": [job("2", "Bosch")]},
+        [],
+        city_label="Timișoara, Cluj-Napoca",
+    )
+    assert email1 is not None
+    assert email1[0] == "[Timișoara, Cluj-Napoca] 1 best, 1 other jobs: Bosch, Nokia"
+
+    email2 = format_email(
+        {"best": [job("1", "Nokia")], "other": []}, [], city_label="Romania"
+    )
+    assert email2 is not None
+    assert email2[0] == "[Romania] 1 best job: Nokia"
+
+    email3 = format_email({}, ["Haufe check broke: boom"], city_label="Cluj-Napoca")
+    assert email3 is not None
+    assert email3[0] == "[Cluj-Napoca] job alert: Haufe check broke: boom"
+
+    assert format_email({}, [], city_label="Timișoara") is None
