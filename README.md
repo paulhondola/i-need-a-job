@@ -4,13 +4,14 @@ Checks employers' careers APIs every day for Timișoara roles and emails the cur
 
 - Run tests: `uv run pytest`
 - Try it locally without sending: `uv run python -m job_radar --dry-run`
-- Secrets: `SMTP_USER` (your Gmail address) and `SMTP_PASS` (a Gmail App Password).
+- Secrets: `SMTP_USER` (your Gmail address), `SMTP_PASS` (a Gmail App Password), and `GROQ_API_KEY` (for LLM preference tiering; falls back to regex-only filtering with an error note if missing). Optional provider overrides: `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL`.
 
 ## Layout
 
+- `preferences.md`: candidate profile and tier definitions (`best`, `other`, `drop`) fed to the LLM filter.
 - `src/job_radar/sources/__init__.py`: the company list, one line per company.
 - `src/job_radar/sources/<system>.py`: one fetcher per hiring system (Greenhouse, Workday, Oracle, SuccessFactors, ...) or custom site (Porsche, Telekom, rinf.tech). Each returns `{id, title, company, location, url}` dicts.
-- `src/job_radar/state.py`: Timișoara matching and result collection. `mailer.py`: the email. `runner.py`: one run.
+- `src/job_radar/state.py`: Timișoara matching and result collection. `filter.py`: regex pre-filter and LLM tiering. `mailer.py`: the email. `runner.py`: one run.
 
 ## Changing companies
 

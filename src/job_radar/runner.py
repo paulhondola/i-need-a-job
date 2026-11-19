@@ -3,6 +3,7 @@ import sys
 from collections.abc import Callable
 
 import job_radar
+from job_radar.filter import filter_jobs
 from job_radar.mailer import format_email, send_email
 from job_radar.sources import FETCHERS
 from job_radar.state import collect_results
@@ -20,7 +21,9 @@ def run(fetchers: dict, send: Callable[[str, str], None]) -> int:
     for source, result in results.items():
         if not isinstance(result, Exception):
             print(f"{source}: {len(jobs.get(source, []))} jobs")
-    email = format_email(jobs, notes)
+    tiered_jobs, filter_notes = filter_jobs(jobs)
+    notes.extend(filter_notes)
+    email = format_email(tiered_jobs, notes)
     if email:
         try:
             send(*email)
@@ -36,4 +39,3 @@ def main() -> int:
     args = parser.parse_args()
     send = (lambda subject, body: print(f"Subject: {subject}\n\n{body}")) if args.dry_run else send_email
     return run(FETCHERS, send)
-

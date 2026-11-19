@@ -15,4 +15,5 @@ jobs:
         env:
           SMTP_USER: ${{ secrets.SMTP_USER }}
           SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
 
