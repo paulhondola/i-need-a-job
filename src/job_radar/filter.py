@@ -13,11 +13,11 @@ _DROP_RE = re.compile(
     r"\b("
     r"senior|sr\.?|lead|team\s*lead|tech\s*lead|principal|staff|architect|manager|director|head\s+of|vp|vice\s+president|chief|expert"
     r"|hr|human\s+resources|recruiter|recruiting|talent\s+acquisition|payroll"
-    r"|finance|financial|accountant|accounting|controlling|controller|tax|audit|treasury"
+    r"|finance|financial|accountant|accounting|controlling|cost\s+controller|tax|audit|treasury"
     r"|procurement|purchasing|buyer|einkauf"
     r"|legal|counsel|paralegal"
     r"|sales|account\s+executive|marketing|copywriter"
-    r"|logistics|supply\s+chain|warehouse|customs"
+    r"|logistics|supply\s+chain|(?<!data\s)warehouse|customs"
     r"|mechanical|electrical\s+design|wiring|harness|manufacturing|production\s+planner|plant|facility|receptionist|assistant\s+to"
     r"|german\s+speaker|with\s+german|german\s+language"
     r")\b",
@@ -68,14 +68,16 @@ def llm_filter(jobs: list[dict], preferences: str) -> dict[str, list[dict]]:
         resp.raise_for_status()
         content = resp.json()["choices"][0]["message"]["content"]
         parsed = json.loads(content)
-        if not isinstance(parsed, dict):
-            raise ValueError("LLM response JSON is not an object")
+        if not isinstance(parsed, dict) or ("best" not in parsed and "other" not in parsed):
+            raise ValueError("LLM response JSON missing 'best'/'other' keys")
 
         seen_in_chunk: set[int] = set()
         for tier_key, target in (("best", best), ("other", other)):
-            raw_indices = parsed.get(tier_key, [])
-            if not isinstance(raw_indices, list):
+            raw_indices = parsed.get(tier_key)
+            if raw_indices is None:
                 continue
+            if not isinstance(raw_indices, list):
+                raise ValueError(f"LLM response tier {tier_key!r} is not a list")
             for idx in raw_indices:
                 # bool is a subclass of int in Python; exclude it explicitly.
                 if isinstance(idx, int) and not isinstance(idx, bool) and 0 <= idx < len(chunk) and idx not in seen_in_chunk:

@@ -5,6 +5,12 @@ from helpers import job
 from job_radar.filter import DEFAULT_PREFERENCES_PATH, filter_jobs, llm_filter, regex_prefilter
 
 
+@pytest.fixture(autouse=True)
+def _clean_llm_env(monkeypatch):
+    for var in ("GROQ_API_KEY", "LLM_API_KEY", "LLM_BASE_URL", "LLM_MODEL"):
+        monkeypatch.delenv(var, raising=False)
+
+
 def titled_job(id: str, title: str, company: str = "Nokia") -> dict:
     return {**job(id, company), "title": title}
 
@@ -17,6 +23,8 @@ def titled_job(id: str, title: str, company: str = "Nokia") -> dict:
     "Full Stack Engineer (TypeScript / React)",
     "AI / Machine Learning Engineer",
     "Data Engineer (Python, SQL)",
+    "Data Warehouse Engineer",
+    "Domain Controller Software Engineer",
     "Rust Systems Programmer",
     "Embedded C++ Developer",
     "Platform & Threading Engineer",
@@ -52,6 +60,7 @@ def test_regex_prefilter_keeps_target_roles(title):
     "Sales Representative",
     "Marketing Specialist",
     "Supply Chain Planner",
+    "Warehouse Manager",
     "Mechanical Design Engineer",
     "Manufacturing Engineer",
     "IT Support Specialist with German",
@@ -61,9 +70,7 @@ def test_regex_prefilter_drops_excluded_roles(title):
     assert regex_prefilter([titled_job("1", title)]) == []
 
 
-def test_llm_filter_empty_jobs_skips_http(monkeypatch):
-    monkeypatch.delenv("GROQ_API_KEY", raising=False)
-    monkeypatch.delenv("LLM_API_KEY", raising=False)
+def test_llm_filter_empty_jobs_skips_http():
     assert llm_filter([], "prefs") == {"best": [], "other": []}
 
 
@@ -118,9 +125,7 @@ def test_llm_filter_chunks_over_200_jobs(monkeypatch):
     assert [j["id"] for j in res["other"]] == ["1", "201"]
 
 
-def test_filter_jobs_zero_survivors_skips_llm_and_preferences(monkeypatch, tmp_path, capsys):
-    monkeypatch.delenv("GROQ_API_KEY", raising=False)
-    monkeypatch.delenv("LLM_API_KEY", raising=False)
+def test_filter_jobs_zero_survivors_skips_llm_and_preferences(tmp_path, capsys):
     j_drop = titled_job("1", "Senior HR Manager", "Nokia")
 
     tiered, notes = filter_jobs({"Nokia": [j_drop]}, preferences_path=tmp_path / "missing.md")
@@ -129,9 +134,7 @@ def test_filter_jobs_zero_survivors_skips_llm_and_preferences(monkeypatch, tmp_p
     assert "filter: 1 total -> 0 after regex -> 0 best, 0 other" in capsys.readouterr().out
 
 
-def test_filter_jobs_fallback_when_api_key_missing(monkeypatch, capsys):
-    monkeypatch.delenv("GROQ_API_KEY", raising=False)
-    monkeypatch.delenv("LLM_API_KEY", raising=False)
+def test_filter_jobs_fallback_when_api_key_missing(capsys):
     j_keep = titled_job("1", "Python Intern", "Nokia")
     j_drop = titled_job("2", "Senior HR Manager", "Nokia")
 
@@ -149,6 +152,29 @@ def test_filter_jobs_fallback_on_malformed_llm_json(monkeypatch):
         return httpx.Response(
             200,
             json={"choices": [{"message": {"content": "not json"}}]},
+            request=httpx.Request("POST", url),
+        )
+
+    monkeypatch.setattr("job_radar.filter.HTTP.post", fake_post)
+    j_keep = titled_job("1", "Python Intern", "Nokia")
+    tiered, notes = filter_jobs({"Nokia": [j_keep]})
+    assert tiered == {"best": [], "other": [j_keep]}
+    assert len(notes) == 1
+    assert notes[0].startswith("llm filter broke:")
+
+
+@pytest.mark.parametrize("content", [
+    '{"error": "rate limit"}',
+    '{"best_matches": [0]}',
+    '{"best": "0, 1", "other": "2"}',
+])
+def test_filter_jobs_fallback_on_wrong_schema_json(monkeypatch, content):
+    monkeypatch.setenv("GROQ_API_KEY", "test-key")
+
+    def fake_post(url, *, headers, json, timeout):
+        return httpx.Response(
+            200,
+            json={"choices": [{"message": {"content": content}}]},
             request=httpx.Request("POST", url),
         )
 

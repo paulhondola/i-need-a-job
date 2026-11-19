@@ -1,5 +1,13 @@
+import pytest
+
 from helpers import job
 from job_radar.runner import run
+
+
+@pytest.fixture(autouse=True)
+def _clean_llm_env(monkeypatch):
+    for var in ("GROQ_API_KEY", "LLM_API_KEY", "LLM_BASE_URL", "LLM_MODEL"):
+        monkeypatch.delenv(var, raising=False)
 
 
 def boom():
