@@ -107,7 +107,9 @@ def test_parse_city_filter_normalizes_hyphens_and_spaces_for_catalog_and_fallbac
     assert cf_fb.cities[1].search_terms == ("Petrosani",)
 
 
-@pytest.mark.parametrize("raw", [["all"], ["Romania"], ["timisoara,all"], ["cluj", "ROMANIA"]])
+@pytest.mark.parametrize(
+    "raw", [["all"], ["Romania"], ["timisoara,all"], ["cluj", "ROMANIA"]]
+)
 def test_parse_city_filter_all_subsumes_individual_cities(raw):
     cf = parse_city_filter(raw)
     assert cf.is_all
@@ -388,7 +390,10 @@ def test_beesite_queries_romania_only_strips_city_and_filters(monkeypatch):
     tm = beesite.fetch_porsche()
     assert [j["id"] for j in tm] == ["1"]
     assert all(c["CriterionName"] != "PositionLocation.City" for c in seen_criteria[0])
-    assert {"CriterionName": "PositionLocation.Country", "CriterionValue": ["176"]} in seen_criteria[0]
+    assert {
+        "CriterionName": "PositionLocation.Country",
+        "CriterionValue": ["176"],
+    } in seen_criteria[0]
 
     buc_cluj = beesite.fetch_porsche(city_filter=parse_city_filter(["bucharest,cluj"]))
     assert [(j["id"], j["location"]) for j in buc_cluj] == [

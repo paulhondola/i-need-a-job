@@ -52,61 +52,72 @@ import httpx
 import pytest
 
 from helpers import job
-from job_radar.filter import DEFAULT_PREFERENCES_PATH, filter_jobs, llm_filter, regex_prefilter
+from job_radar.filter import (
+    DEFAULT_PREFERENCES_PATH,
+    filter_jobs,
+    llm_filter,
+    regex_prefilter,
+)
 
 
 def titled_job(id: str, title: str, company: str = "Nokia") -> dict:
     return {**job(id, company), "title": title}
 
 
-@pytest.mark.parametrize("title", [
-    "Software Engineer Intern",
-    "Working Student Python & AI (m/f/d)",
-    "Werkstudent Softwareentwicklung (m/w/d)",
-    "Junior Backend Developer (Python/FastAPI)",
-    "Full Stack Engineer (TypeScript / React)",
-    "AI / Machine Learning Engineer",
-    "Data Engineer (Python, SQL)",
-    "Rust Systems Programmer",
-    "Embedded C++ Developer",
-    "Platform & Threading Engineer",
-    "Syntax & Compiler Engineer",
-    "Software Developer (SRL)",
-    "MVP Backend Engineer",
-])
+@pytest.mark.parametrize(
+    "title",
+    [
+        "Software Engineer Intern",
+        "Working Student Python & AI (m/f/d)",
+        "Werkstudent Softwareentwicklung (m/w/d)",
+        "Junior Backend Developer (Python/FastAPI)",
+        "Full Stack Engineer (TypeScript / React)",
+        "AI / Machine Learning Engineer",
+        "Data Engineer (Python, SQL)",
+        "Rust Systems Programmer",
+        "Embedded C++ Developer",
+        "Platform & Threading Engineer",
+        "Syntax & Compiler Engineer",
+        "Software Developer (SRL)",
+        "MVP Backend Engineer",
+    ],
+)
 def test_regex_prefilter_keeps_target_roles(title):
     j = titled_job("1", title)
     assert regex_prefilter([j]) == [j]
 
 
-@pytest.mark.parametrize("title", [
-    "Senior Software Engineer",
-    "Sr. Backend Developer",
-    "Lead Data Engineer",
-    "Team Lead Software Development",
-    "Tech Lead Java",
-    "Principal Systems Architect",
-    "Staff Software Engineer",
-    "Solution Architect",
-    "Engineering Manager",
-    "Director of Engineering",
-    "Head of IT",
-    "VP of Engineering",
-    "HR Specialist",
-    "Talent Acquisition Partner",
-    "Junior Accountant",
-    "Financial Controller",
-    "Procurement Specialist",
-    "Sachbearbeiter Einkauf (m/w/d)",
-    "Legal Counsel",
-    "Sales Representative",
-    "Marketing Specialist",
-    "Supply Chain Planner",
-    "Mechanical Design Engineer",
-    "Manufacturing Engineer",
-    "IT Support Specialist with German",
-    "Helpdesk Analyst (German Speaker)",
-])
+@pytest.mark.parametrize(
+    "title",
+    [
+        "Senior Software Engineer",
+        "Sr. Backend Developer",
+        "Lead Data Engineer",
+        "Team Lead Software Development",
+        "Tech Lead Java",
+        "Principal Systems Architect",
+        "Staff Software Engineer",
+        "Solution Architect",
+        "Engineering Manager",
+        "Director of Engineering",
+        "Head of IT",
+        "VP of Engineering",
+        "HR Specialist",
+        "Talent Acquisition Partner",
+        "Junior Accountant",
+        "Financial Controller",
+        "Procurement Specialist",
+        "Sachbearbeiter Einkauf (m/w/d)",
+        "Legal Counsel",
+        "Sales Representative",
+        "Marketing Specialist",
+        "Supply Chain Planner",
+        "Mechanical Design Engineer",
+        "Manufacturing Engineer",
+        "IT Support Specialist with German",
+        "Helpdesk Analyst (German Speaker)",
+    ],
+)
 def test_regex_prefilter_drops_excluded_roles(title):
     assert regex_prefilter([titled_job("1", title)]) == []
 
@@ -124,7 +135,15 @@ def test_llm_filter_classifies_and_deduplicates_indices(monkeypatch):
         calls.append((url, headers, json, timeout))
         return httpx.Response(
             200,
-            json={"choices": [{"message": {"content": '{"best": [0, 0, 99, "bad"], "other": [0, 2, -1]}'}}]},
+            json={
+                "choices": [
+                    {
+                        "message": {
+                            "content": '{"best": [0, 0, 99, "bad"], "other": [0, 2, -1]}'
+                        }
+                    }
+                ]
+            },
             request=httpx.Request("POST", url),
         )
 
@@ -141,7 +160,10 @@ def test_llm_filter_classifies_and_deduplicates_indices(monkeypatch):
     assert headers["Authorization"] == "Bearer test-key"
     assert payload["model"] == "llama-3.3-70b-versatile"
     assert payload["response_format"] == {"type": "json_object"}
-    assert "0: [Nokia] Software Engineer Intern (Timișoara)" in payload["messages"][1]["content"]
+    assert (
+        "0: [Nokia] Software Engineer Intern (Timișoara)"
+        in payload["messages"][1]["content"]
+    )
     assert "u1" not in payload["messages"][1]["content"]
 
 
@@ -167,14 +189,20 @@ def test_llm_filter_chunks_over_200_jobs(monkeypatch):
     assert [j["id"] for j in res["other"]] == ["1", "201"]
 
 
-def test_filter_jobs_zero_survivors_skips_llm_and_preferences(monkeypatch, tmp_path, capsys):
+def test_filter_jobs_zero_survivors_skips_llm_and_preferences(
+    monkeypatch, tmp_path, capsys
+):
     monkeypatch.delenv("LLM_API_KEY", raising=False)
     j_drop = titled_job("1", "Senior HR Manager", "Nokia")
 
-    tiered, notes = filter_jobs({"Nokia": [j_drop]}, preferences_path=tmp_path / "missing.md")
+    tiered, notes = filter_jobs(
+        {"Nokia": [j_drop]}, preferences_path=tmp_path / "missing.md"
+    )
     assert tiered == {"best": [], "other": []}
     assert notes == []
-    assert "filter: 1 total -> 0 after regex -> 0 best, 0 other" in capsys.readouterr().out
+    assert (
+        "filter: 1 total -> 0 after regex -> 0 best, 0 other" in capsys.readouterr().out
+    )
 
 
 def test_filter_jobs_fallback_when_api_key_missing(monkeypatch, capsys):
@@ -186,7 +214,9 @@ def test_filter_jobs_fallback_when_api_key_missing(monkeypatch, capsys):
     assert tiered == {"best": [], "other": [j_keep]}
     assert len(notes) == 1
     assert notes[0].startswith("llm filter broke:")
-    assert "filter: 2 total -> 1 after regex -> 0 best, 1 other" in capsys.readouterr().out
+    assert (
+        "filter: 2 total -> 1 after regex -> 0 best, 1 other" in capsys.readouterr().out
+    )
 
 
 def test_filter_jobs_fallback_on_malformed_llm_json(monkeypatch):
@@ -268,8 +298,17 @@ def test_email_renders_both_tiers_grouped_by_company():
     assert subject == "2 best, 2 other jobs: Bosch, Nokia, OPSWAT, Porsche Engineering"
     assert "=== BEST MATCHES (2) ===" in body
     assert "=== OTHER TECH ROLES (2) ===" in body
-    assert body.index("=== BEST MATCHES (2) ===") < body.index("Nokia") < body.index("OPSWAT")
-    assert body.index("OPSWAT") < body.index("=== OTHER TECH ROLES (2) ===") < body.index("Bosch") < body.index("Porsche Engineering")
+    assert (
+        body.index("=== BEST MATCHES (2) ===")
+        < body.index("Nokia")
+        < body.index("OPSWAT")
+    )
+    assert (
+        body.index("OPSWAT")
+        < body.index("=== OTHER TECH ROLES (2) ===")
+        < body.index("Bosch")
+        < body.index("Porsche Engineering")
+    )
 
 
 def test_email_best_only_singular_and_plural():
@@ -278,7 +317,9 @@ def test_email_best_only_singular_and_plural():
     assert "=== BEST MATCHES (1) ===" in body
     assert "=== OTHER TECH ROLES" not in body
 
-    subject2, _ = format_email({"best": [job("1", "Nokia"), job("2", "OPSWAT")], "other": []}, [])
+    subject2, _ = format_email(
+        {"best": [job("1", "Nokia"), job("2", "OPSWAT")], "other": []}, []
+    )
     assert subject2 == "2 best jobs: Nokia, OPSWAT"
 
 
@@ -288,7 +329,9 @@ def test_email_other_only_singular_and_plural():
     assert "=== OTHER TECH ROLES (1) ===" in body
     assert "=== BEST MATCHES" not in body
 
-    subject2, _ = format_email({"best": [], "other": [job("1", "Nokia"), job("2", "OPSWAT")]}, [])
+    subject2, _ = format_email(
+        {"best": [], "other": [job("1", "Nokia"), job("2", "OPSWAT")]}, []
+    )
     assert subject2 == "2 jobs: Nokia, OPSWAT"
 
 
@@ -299,7 +342,9 @@ def test_email_notes_only():
 
 
 def test_email_notes_after_jobs():
-    _, body = format_email({"best": [job("3", "OPSWAT")], "other": []}, ["Haufe check broke: boom"])
+    _, body = format_email(
+        {"best": [job("3", "OPSWAT")], "other": []}, ["Haufe check broke: boom"]
+    )
     assert body.index("T3") < body.index("Haufe check broke: boom")
 
 
@@ -360,7 +405,10 @@ def test_run_filters_and_tiers_jobs(monkeypatch):
         lambda jobs: ({"best": [job("1", "OPSWAT")], "other": [job("2", "Nokia")]}, []),
     )
     sent = []
-    fetchers = {"OPSWAT": lambda: [job("1", "OPSWAT")], "Nokia": lambda: [job("2", "Nokia")]}
+    fetchers = {
+        "OPSWAT": lambda: [job("1", "OPSWAT")],
+        "Nokia": lambda: [job("2", "Nokia")],
+    }
     assert run(fetchers, lambda s, b: sent.append((s, b))) == 0
     assert len(sent) == 1
     subject, body = sent[0]
@@ -372,8 +420,18 @@ def test_run_filters_and_tiers_jobs(monkeypatch):
 def test_run_falls_back_when_llm_key_missing(monkeypatch):
     monkeypatch.delenv("LLM_API_KEY", raising=False)
     sent = []
-    assert run({"OPSWAT": lambda: [job("1", "OPSWAT"), {**job("2", "OPSWAT"), "title": "Senior HR Manager"}]},
-               lambda s, b: sent.append((s, b))) == 0
+    assert (
+        run(
+            {
+                "OPSWAT": lambda: [
+                    job("1", "OPSWAT"),
+                    {**job("2", "OPSWAT"), "title": "Senior HR Manager"},
+                ]
+            },
+            lambda s, b: sent.append((s, b)),
+        )
+        == 0
+    )
     assert len(sent) == 1
     subject, body = sent[0]
     assert subject == "1 job: OPSWAT"
@@ -382,9 +440,18 @@ def test_run_falls_back_when_llm_key_missing(monkeypatch):
 
 
 def test_run_one_source_raising_does_not_stop_others(monkeypatch):
-    monkeypatch.setattr("job_radar.runner.filter_jobs", lambda jobs: ({"best": [job("2", "OPSWAT")], "other": []}, []))
+    monkeypatch.setattr(
+        "job_radar.runner.filter_jobs",
+        lambda jobs: ({"best": [job("2", "OPSWAT")], "other": []}, []),
+    )
     sent = []
-    assert run({"Haufe": boom, "OPSWAT": lambda: [job("2", "OPSWAT")]}, lambda s, b: sent.append((s, b))) == 0
+    assert (
+        run(
+            {"Haufe": boom, "OPSWAT": lambda: [job("2", "OPSWAT")]},
+            lambda s, b: sent.append((s, b)),
+        )
+        == 0
+    )
     assert len(sent) == 1
     subject, body = sent[0]
     assert subject == "1 best job: OPSWAT"
@@ -393,9 +460,14 @@ def test_run_one_source_raising_does_not_stop_others(monkeypatch):
 
 
 def test_run_smtp_failure_exits_nonzero(monkeypatch):
-    monkeypatch.setattr("job_radar.runner.filter_jobs", lambda jobs: ({"best": [job("2")], "other": []}, []))
+    monkeypatch.setattr(
+        "job_radar.runner.filter_jobs",
+        lambda jobs: ({"best": [job("2")], "other": []}, []),
+    )
+
     def bad_send(s, b):
         raise OSError("smtp down")
+
     assert run({"OPSWAT": lambda: [job("2")]}, bad_send) != 0
 
 
