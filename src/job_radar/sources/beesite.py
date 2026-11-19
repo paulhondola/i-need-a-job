@@ -1,9 +1,10 @@
 import json
 
+from job_radar.cities import DEFAULT_CITY_FILTER, CityFilter
 from job_radar.client import HTTP
 
 
-def fetch_porsche() -> list[dict]:
+def fetch_porsche(city_filter: CityFilter = DEFAULT_CITY_FILTER) -> list[dict]:
     query = {
         "LanguageCode": "EN",
         "SearchParameters": {
@@ -17,10 +18,9 @@ def fetch_porsche() -> list[dict]:
                 "ParentOrganizationName",
             ],
         },
-        # 176 = Romania, 311 = Timișoara, channel 12 = public board (from jobs.porsche.com search URL)
+        # 176 = Romania, channel 12 = public board (from jobs.porsche.com search URL)
         "SearchCriteria": [
             {"CriterionName": "PositionLocation.Country", "CriterionValue": ["176"]},
-            {"CriterionName": "PositionLocation.City", "CriterionValue": ["311"]},
             {"CriterionName": "PublicationChannel.Code", "CriterionValue": ["12"]},
         ],
     }
@@ -32,16 +32,18 @@ def fetch_porsche() -> list[dict]:
         .raise_for_status()
         .json()
     )
-    return [
-        {
-            "id": str(d["ID"]),
-            "title": d["PositionTitle"],
-            "company": d["ParentOrganizationName"],
-            "location": d["PositionLocation"][0]["CityName"],
-            "url": d["PositionURI"],
-        }
-        for d in (
-            item["MatchedObjectDescriptor"]
-            for item in data["SearchResult"]["SearchResultItems"]
-        )
-    ]
+    jobs = []
+    for item in data["SearchResult"]["SearchResultItems"]:
+        d = item["MatchedObjectDescriptor"]
+        city = ((d.get("PositionLocation") or [{}])[0].get("CityName") or "").strip()
+        if city_filter.is_all or city_filter.matches(city):
+            jobs.append(
+                {
+                    "id": str(d["ID"]),
+                    "title": d["PositionTitle"],
+                    "company": d["ParentOrganizationName"],
+                    "location": city,
+                    "url": d["PositionURI"],
+                }
+            )
+    return jobs

@@ -1,38 +1,6 @@
-import pytest
 from helpers import job
 
-from job_radar.state import collect_results, matches_timisoara
-
-
-@pytest.mark.parametrize(
-    "loc",
-    [
-        "Timișoara",
-        "Timişoara",
-        "Timisoara",
-        "TIMISOARA",
-        "Timișoara, Timiș, Romania",
-        "Romania, Timisoara",
-        "Romania",
-        " romania ",
-    ],
-)
-def test_location_matches(loc):
-    assert matches_timisoara(loc)
-
-
-@pytest.mark.parametrize(
-    "loc",
-    [
-        "Romania, Bucharest",
-        "Cluj-Napoca, Romania",
-        "Budapest, Hungary",
-        "EMEA - Remote",
-        "",
-    ],
-)
-def test_location_rejects(loc):
-    assert not matches_timisoara(loc)
+from job_radar.state import collect_results
 
 
 def test_collects_all_jobs():

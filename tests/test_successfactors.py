@@ -1,5 +1,6 @@
 import httpx
 
+from job_radar.cities import parse_city_filter
 from job_radar.sources import successfactors
 
 # Huf's real "no results" feed: the placeholder item has a raw "&" from the company name, so it isn't valid XML.
@@ -52,4 +53,42 @@ def test_fetch_parses_active_feed_and_filters_timisoara(monkeypatch):
             "location": "Timisoara (Hybrid), RO",
             "url": "https://careers.ey.com/ey/job/Timisoara-SE/1407356333/",
         },
+    ]
+
+
+def test_successfactors_queries_all_search_terms_and_deduplicates(monkeypatch):
+    feeds = {
+        "Bucharest": """<?xml version="1.0" encoding="UTF-8" ?><rss version='2.0'><channel>
+<item><title>Backend Engineer (Bucharest, RO)</title><link>https://careers.ey.com/job/101/</link></item>
+<item><title>Timisoara Dev (Timisoara, RO)</title><link>https://careers.ey.com/job/999/</link></item>
+</channel></rss>""",
+        "Bucuresti": """<?xml version="1.0" encoding="UTF-8" ?><rss version='2.0'><channel>
+<item><title>Backend Engineer (Bucharest, RO)</title><link>https://careers.ey.com/job/101/</link></item>
+<item><title>Data Engineer (Bucuresti, RO)</title><link>https://careers.ey.com/job/102/</link></item>
+</channel></rss>""",
+        "Romania": """<?xml version="1.0" encoding="UTF-8" ?><rss version='2.0'><channel>
+<item><title>Data Engineer (Bucuresti, RO)</title><link>https://careers.ey.com/job/102/</link></item>
+<item><title>Remote Engineer (Romania)</title><link>https://careers.ey.com/job/103/</link></item>
+</channel></rss>""",
+    }
+    seen_keywords = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        kw = req.url.params["keywords"]
+        seen_keywords.append(kw)
+        return httpx.Response(200, text=feeds[kw])
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    monkeypatch.setattr(successfactors, "HTTP", client)
+
+    jobs = successfactors.fetch(
+        host="careers.ey.com",
+        company="EY",
+        city_filter=parse_city_filter(["bucharest"]),
+    )
+    assert seen_keywords == ["Bucharest", "Bucuresti", "Romania"]
+    assert [(j["id"], j["location"]) for j in jobs] == [
+        ("101", "Bucharest, RO"),
+        ("102", "Bucuresti, RO"),
+        ("103", "Romania"),
     ]
