@@ -35,14 +35,21 @@ def fetch_porsche(city_filter: CityFilter = DEFAULT_CITY_FILTER) -> list[dict]:
     jobs = []
     for item in data["SearchResult"]["SearchResultItems"]:
         d = item["MatchedObjectDescriptor"]
-        city = ((d.get("PositionLocation") or [{}])[0].get("CityName") or "").strip()
-        if city_filter.is_all or city_filter.matches(city):
+        cities = list(
+            dict.fromkeys(
+                name
+                for loc in (d.get("PositionLocation") or [])
+                if isinstance(loc, dict)
+                and (name := (loc.get("CityName") or "").strip())
+            )
+        )
+        if city_filter.is_all or any(city_filter.matches(c) for c in cities):
             jobs.append(
                 {
                     "id": str(d["ID"]),
                     "title": d["PositionTitle"],
                     "company": d["ParentOrganizationName"],
-                    "location": city,
+                    "location": "; ".join(cities),
                     "url": d["PositionURI"],
                 }
             )

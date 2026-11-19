@@ -57,3 +57,46 @@ def test_beesite_queries_romania_only_strips_city_and_filters(monkeypatch):
 
     all_ro = beesite.fetch_porsche(city_filter=parse_city_filter(["all"]))
     assert [j["id"] for j in all_ro] == ["1", "2", "3", "4", "5"]
+
+
+def test_beesite_matches_multi_location_posting_and_ignores_null_entries(monkeypatch):
+    payload = {
+        "SearchResult": {
+            "SearchResultItems": [
+                {
+                    "MatchedObjectDescriptor": {
+                        "ID": 10,
+                        "PositionTitle": "Multi-Office Engineer",
+                        "PositionURI": "https://jobs.porsche.com/10",
+                        "PositionLocation": [
+                            {"CityName": "Bucharest "},
+                            {"CityName": "Timisoara "},
+                        ],
+                        "ParentOrganizationName": "Porsche Engineering Romania",
+                    }
+                },
+                {
+                    "MatchedObjectDescriptor": {
+                        "ID": 11,
+                        "PositionTitle": "Null Location Entry",
+                        "PositionURI": "https://jobs.porsche.com/11",
+                        "PositionLocation": [None],
+                        "ParentOrganizationName": "Porsche Engineering Romania",
+                    }
+                },
+            ]
+        }
+    }
+    client = httpx.Client(
+        transport=httpx.MockTransport(lambda req: httpx.Response(200, json=payload))
+    )
+    monkeypatch.setattr(beesite, "HTTP", client)
+
+    tm = beesite.fetch_porsche()
+    assert [(j["id"], j["location"]) for j in tm] == [("10", "Bucharest; Timisoara")]
+
+    all_ro = beesite.fetch_porsche(city_filter=parse_city_filter(["all"]))
+    assert [(j["id"], j["location"]) for j in all_ro] == [
+        ("10", "Bucharest; Timisoara"),
+        ("11", ""),
+    ]
