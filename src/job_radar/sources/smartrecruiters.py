@@ -1,8 +1,10 @@
+from job_radar.cities import DEFAULT_CITY_FILTER, CityFilter
 from job_radar.client import HTTP
-from job_radar.state import matches_timisoara
 
 
-def fetch(slug: str, company: str) -> list[dict]:
+def fetch(
+    slug: str, company: str, city_filter: CityFilter = DEFAULT_CITY_FILTER
+) -> list[dict]:
     # The API's own city filter doesn't fold diacritics ("Timisoara" misses "Timișoara"), so filter by country only.
     url = f"https://api.smartrecruiters.com/v1/companies/{slug}/postings"
     jobs, offset = [], 0
@@ -13,9 +15,11 @@ def fetch(slug: str, company: str) -> list[dict]:
             .json()
         )
         for p in page["content"]:
-            # Remote roles count too: the query is already limited to Romania.
-            if p["location"].get("remote") or matches_timisoara(
-                p["location"].get("city") or ""
+            # Remote roles and --city all count too: the query is already limited to Romania.
+            if (
+                p["location"].get("remote")
+                or city_filter.is_all
+                or city_filter.matches(p["location"].get("city") or "")
             ):
                 jobs.append(
                     {

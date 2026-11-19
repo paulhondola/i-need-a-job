@@ -1,8 +1,13 @@
+from job_radar.cities import DEFAULT_CITY_FILTER, CityFilter
 from job_radar.client import HTTP
-from job_radar.state import matches_timisoara
 
 
-def fetch(slug: str, company: str, api_host: str = "api.lever.co") -> list[dict]:
+def fetch(
+    slug: str,
+    company: str,
+    api_host: str = "api.lever.co",
+    city_filter: CityFilter = DEFAULT_CITY_FILTER,
+) -> list[dict]:
     """Lever postings API. EU-hosted boards (jobs.eu.lever.co) use api_host="api.eu.lever.co"."""
     postings = (
         HTTP.get(f"https://{api_host}/v0/postings/{slug}", params={"mode": "json"})
@@ -14,7 +19,7 @@ def fetch(slug: str, company: str, api_host: str = "api.lever.co") -> list[dict]
         locations = p["categories"].get("allLocations") or [
             p["categories"].get("location") or ""
         ]
-        if any(matches_timisoara(loc) for loc in locations):
+        if any(city_filter.matches(loc) for loc in locations):
             jobs.append(
                 {
                     "id": p["id"],

@@ -1,8 +1,14 @@
+from job_radar.cities import DEFAULT_CITY_FILTER, CityFilter
 from job_radar.client import HTTP
-from job_radar.state import matches_timisoara
 
 
-def fetch(api_host: str, site: str, job_url_prefix: str, company: str) -> list[dict]:
+def fetch(
+    api_host: str,
+    site: str,
+    job_url_prefix: str,
+    company: str,
+    city_filter: CityFilter = DEFAULT_CITY_FILTER,
+) -> list[dict]:
     """Oracle Recruiting Cloud. api_host is the *.oraclecloud.com host the careers site redirects to."""
     url = f"https://{api_host}/hcmRestApi/resources/latest/recruitingCEJobRequisitions"
     jobs, offset = [], 0
@@ -23,7 +29,7 @@ def fetch(api_host: str, site: str, job_url_prefix: str, company: str) -> list[d
                 ]
                 if loc
             ]
-            if any(matches_timisoara(loc) for loc in locations):
+            if any(city_filter.matches(loc) for loc in locations):
                 jobs.append(
                     {
                         "id": str(r["Id"]),

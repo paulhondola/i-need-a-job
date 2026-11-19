@@ -1,8 +1,14 @@
+from job_radar.cities import DEFAULT_CITY_FILTER, CityFilter
 from job_radar.client import HTTP
-from job_radar.state import matches_timisoara
 
 
-def fetch(host: str, tenant: str, site: str, company: str) -> list[dict]:
+def fetch(
+    host: str,
+    tenant: str,
+    site: str,
+    company: str,
+    city_filter: CityFilter = DEFAULT_CITY_FILTER,
+) -> list[dict]:
     """host e.g. "intel.wd1.myworkdayjobs.com", tenant "intel", site "External"."""
     url = f"https://{host}/wday/cxs/{tenant}/{site}/jobs"
     body = {"appliedFacets": {}, "limit": 20, "offset": 0, "searchText": ""}
@@ -12,7 +18,7 @@ def fetch(host: str, tenant: str, site: str, company: str) -> list[dict]:
     locations = next(g for g in group["values"] if g["facetParameter"] == "locations")[
         "values"
     ]
-    matched = [v for v in locations if matches_timisoara(v["descriptor"])]
+    matched = [v for v in locations if city_filter.matches(v["descriptor"])]
     ids = [v["id"] for v in matched]
     if not ids:
         return []

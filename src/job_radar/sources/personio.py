@@ -1,10 +1,16 @@
 import xml.etree.ElementTree as ET
 
+from job_radar.cities import DEFAULT_CITY_FILTER, CityFilter
 from job_radar.client import HTTP
-from job_radar.state import matches_timisoara
 
 
-def fetch(slug: str, company: str, tld: str = "de", job_url: str = "") -> list[dict]:
+def fetch(
+    slug: str,
+    company: str,
+    tld: str = "de",
+    job_url: str = "",
+    city_filter: CityFilter = DEFAULT_CITY_FILTER,
+) -> list[dict]:
     """job_url: link format with {id}; companies that hide Personio's hosted page link to their own site."""
     job_url = job_url or f"https://{slug}.jobs.personio.{tld}/job/{{id}}"
     root = ET.fromstring(
@@ -15,7 +21,7 @@ def fetch(slug: str, company: str, tld: str = "de", job_url: str = "") -> list[d
         offices = [p.findtext("office") or ""] + [
             o.text or "" for o in p.iterfind("additionalOffices/office")
         ]
-        if any(matches_timisoara(o) for o in offices):
+        if any(city_filter.matches(o) for o in offices):
             jobs.append(
                 {
                     "id": p.findtext("id", ""),
