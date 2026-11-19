@@ -1,9 +1,7 @@
-import os
-
 import pytest
 from helpers import job
 
-from job_radar.runner import load_dotenv, run
+from job_radar.runner import main, run
 
 
 @pytest.fixture(autouse=True)
@@ -17,16 +15,20 @@ def boom():
 
 
 def test_run_filters_and_tiers_jobs(monkeypatch):
-    monkeypatch.setattr(
-        "job_radar.runner.filter_jobs",
-        lambda jobs: ({"best": [job("1", "OPSWAT")], "other": [job("2", "Nokia")]}, []),
-    )
+    received = []
+
+    def fake_filter_jobs(jobs):
+        received.append(jobs)
+        return {"best": [job("1", "OPSWAT")], "other": [job("2", "Nokia")]}, []
+
+    monkeypatch.setattr("job_radar.runner.filter_jobs", fake_filter_jobs)
     sent = []
     fetchers = {
         "OPSWAT": lambda: [job("1", "OPSWAT")],
         "Nokia": lambda: [job("2", "Nokia")],
     }
     assert run(fetchers, lambda s, b: sent.append((s, b))) == 0
+    assert received == [[job("1", "OPSWAT"), job("2", "Nokia")]]
     assert len(sent) == 1
     subject, body = sent[0]
     assert subject == "1 best, 1 other jobs: Nokia, OPSWAT"
@@ -95,24 +97,16 @@ def test_run_nothing_to_send(monkeypatch):
     assert sent == []
 
 
-def test_load_dotenv_sets_missing_and_preserves_existing(tmp_path, monkeypatch):
-    env_file = tmp_path / ".env"
-    env_file.write_text(
-        "# comment\n"
-        "\n"
-        "LLM_API_KEY=from-dotenv\n"
-        'export LLM_MODEL="quoted-model"\n'
-        "EXISTING_VAR=from-dotenv\n",
-        encoding="utf-8",
-    )
-    monkeypatch.setenv("EXISTING_VAR", "from-shell")
+def test_main_loads_dotenv_before_running(monkeypatch):
+    events = []
 
-    load_dotenv(env_file)
+    def fake_run(fetchers, send):
+        events.append("run")
+        return 0
 
-    assert os.environ["LLM_API_KEY"] == "from-dotenv"
-    assert os.environ["LLM_MODEL"] == "quoted-model"
-    assert os.environ["EXISTING_VAR"] == "from-shell"
+    monkeypatch.setattr("sys.argv", ["job_radar", "--dry-run"])
+    monkeypatch.setattr("job_radar.runner.load_dotenv", lambda: events.append("dotenv"))
+    monkeypatch.setattr("job_radar.runner.run", fake_run)
 
-
-def test_load_dotenv_ignores_missing_file(tmp_path):
-    load_dotenv(tmp_path / "missing.env")
+    assert main() == 0
+    assert events == ["dotenv", "run"]

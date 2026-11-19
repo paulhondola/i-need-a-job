@@ -1,8 +1,9 @@
 import argparse
-import os
 import sys
 from collections.abc import Callable
-from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
+
+from dotenv import load_dotenv
 
 import job_radar
 from job_radar.filter import filter_jobs
@@ -10,40 +11,18 @@ from job_radar.mailer import format_email, send_email
 from job_radar.sources import FETCHERS
 from job_radar.state import collect_results
 
-DEFAULT_ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
-
-
-def load_dotenv(path: Path = DEFAULT_ENV_PATH) -> None:
-    """Populate os.environ from a .env file without overriding existing variables."""
-    if not path.is_file():
-        return
-    for raw_line in path.read_text(encoding="utf-8").splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        if line.startswith("export "):
-            line = line[len("export ") :].lstrip()
-        key, value = line.split("=", 1)
-        key = key.strip()
-        value = value.strip()
-        if len(value) >= 2 and value[0] == value[-1] and value[0] in ('"', "'"):
-            value = value[1:-1]
-        if key:
-            os.environ.setdefault(key, value)
-
 
 def run(fetchers: dict, send: Callable[[str, str], None]) -> int:
     results = {}
-    for source, fetch in fetchers.items():
-        try:
-            results[source] = fetch()
-        except Exception as e:  # noqa: BLE001 — one broken site must not stop the others
-            print(f"{source}: {e!r}", file=sys.stderr)
-            results[source] = e
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        futures = {source: pool.submit(fetch) for source, fetch in fetchers.items()}
+        for source, future in futures.items():
+            try:
+                results[source] = future.result()
+            except Exception as e:  # noqa: BLE001 — one broken site must not stop the others
+                print(f"{source}: {e!r}", file=sys.stderr)
+                results[source] = e
     jobs, notes = collect_results(results)
-    for source, result in results.items():
-        if not isinstance(result, Exception):
-            print(f"{source}: {len(jobs.get(source, []))} jobs")
     tiered_jobs, filter_notes = filter_jobs(jobs)
     notes.extend(filter_notes)
     email = format_email(tiered_jobs, notes)

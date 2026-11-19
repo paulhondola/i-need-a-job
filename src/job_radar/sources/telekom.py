@@ -19,7 +19,7 @@ def fetch() -> list[dict]:
             .json()
         )
         for p in data["data"]:
-            if any(matches_timisoara(c) for c in p["city"].split(",")):
+            if matches_timisoara(p["city"]):
                 jobs.append(
                     {
                         "id": p["requisition_id"],
@@ -29,6 +29,6 @@ def fetch() -> list[dict]:
                         "url": f"https://careers.telekom.com/en/jobs/{p['requisition_id']}",
                     }
                 )
-        if page >= data["pagination_info"]["number_of_pages"]:
+        if not data["data"] or page >= data["pagination_info"]["number_of_pages"]:
             return jobs
         page += 1

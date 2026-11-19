@@ -11,14 +11,14 @@ _CHUNK_SIZE = 200
 
 _DROP_RE = re.compile(
     r"\b("
-    r"senior|sr\.?|lead|team\s*lead|tech\s*lead|principal|staff|architect|manager|director|head\s+of|vp|vice\s+president|chief|expert"
+    r"senior|sr|lead|team\s*lead|tech\s*lead|principal|staff|architect|manager|director|head\s+of|vp|vice\s+president|chief|expert"
     r"|hr|human\s+resources|recruiter|recruiting|talent\s+acquisition|payroll"
-    r"|finance|financial|accountant|accounting|controlling|cost\s+controller|tax|audit|treasury"
+    r"|finance|financial|accountant|accounting|controlling|cost\s+controller|tax|(?<!security\s)(?<!it\s)audit|treasury"
     r"|procurement|purchasing|buyer|einkauf"
     r"|legal|counsel|paralegal"
     r"|sales|account\s+executive|marketing|copywriter"
-    r"|logistics|supply\s+chain|(?<!data\s)warehouse|customs"
-    r"|mechanical|electrical\s+design|wiring|harness|manufacturing|production\s+planner|plant|facility|receptionist|assistant\s+to"
+    r"|logistics|supply\s+chain|(?<!data[\s-])warehouse|customs"
+    r"|mechanical|electrical\s+design|wiring|harness|manufacturing(?!\s+(?:it|software|execution|systems)\b)|production\s+planner|plant(?!\s+(?:it|software)\b)|facility|receptionist|assistant\s+to"
     r"|german\s+speaker|with\s+german|german\s+language"
     r")\b",
     re.IGNORECASE,
@@ -44,10 +44,10 @@ def llm_filter(jobs: list[dict], preferences: str) -> dict[str, list[dict]]:
     api_key = os.environ.get("LLM_API_KEY")
     if not api_key:
         raise RuntimeError("LLM_API_KEY not set")
-    base_url = os.environ.get("LLM_BASE_URL", "https://api.groq.com/openai/v1").rstrip(
-        "/"
-    )
-    model = os.environ.get("LLM_MODEL", "llama-3.3-70b-versatile")
+    base_url = (
+        os.environ.get("LLM_BASE_URL") or "https://api.groq.com/openai/v1"
+    ).rstrip("/")
+    model = os.environ.get("LLM_MODEL") or "openai/gpt-oss-120b"
     url = f"{base_url}/chat/completions"
     headers = {"Authorization": f"Bearer {api_key}"}
 
@@ -99,12 +99,11 @@ def llm_filter(jobs: list[dict], preferences: str) -> dict[str, list[dict]]:
 
 
 def filter_jobs(
-    jobs_by_source: dict[str, list[dict]],
+    jobs: list[dict],
     preferences_path: Path = DEFAULT_PREFERENCES_PATH,
 ) -> tuple[dict[str, list[dict]], list[str]]:
     """Apply regex prefiltering and LLM tiering, falling back to 'other' on LLM failure."""
-    all_jobs = [j for jobs in jobs_by_source.values() for j in jobs]
-    surviving = regex_prefilter(all_jobs)
+    surviving = regex_prefilter(jobs)
     notes: list[str] = []
     if not surviving:
         tiered = {"best": [], "other": []}
@@ -114,10 +113,10 @@ def filter_jobs(
             tiered = llm_filter(surviving, preferences)
         except Exception as e:  # noqa: BLE001
             print(f"llm filter: {e!r}", file=sys.stderr)
-            notes.append(f"llm filter broke: {e}")
+            notes.append(f"llm filter broke: {str(e) or type(e).__name__}")
             tiered = {"best": [], "other": surviving}
     print(
-        f"filter: {len(all_jobs)} total -> {len(surviving)} after regex -> "
+        f"filter: {len(jobs)} total -> {len(surviving)} after regex -> "
         f"{len(tiered['best'])} best, {len(tiered['other'])} other"
     )
     return tiered, notes

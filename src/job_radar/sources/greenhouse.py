@@ -8,14 +8,17 @@ def fetch(board: str, company: str) -> list[dict]:
         .raise_for_status()
         .json()
     )
-    return [
-        {
-            "id": str(j["id"]),
-            "title": j["title"],
-            "company": company,
-            "location": j["location"]["name"],
-            "url": j["absolute_url"],
-        }
-        for j in data["jobs"]
-        if any(matches_timisoara(part) for part in j["location"]["name"].split(";"))
-    ]
+    jobs = []
+    for j in data["jobs"]:
+        loc = (j.get("location") or {}).get("name") or ""
+        if any(matches_timisoara(part) for part in loc.split(";")):
+            jobs.append(
+                {
+                    "id": str(j["id"]),
+                    "title": j["title"],
+                    "company": company,
+                    "location": loc,
+                    "url": j["absolute_url"],
+                }
+            )
+    return jobs

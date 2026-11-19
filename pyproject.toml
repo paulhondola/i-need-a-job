@@ -2,7 +2,10 @@
 name = "job-radar"
 version = "0"
 requires-python = ">=3.12"
-dependencies = ["httpx"]
+dependencies = [
+    "httpx",
+    "python-dotenv>=1.2.4",
+]
 
 [dependency-groups]
 dev = ["pyrefly", "pytest", "ruff"]

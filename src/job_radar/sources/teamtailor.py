@@ -16,7 +16,7 @@ def fetch(slug: str, company: str) -> list[dict]:
             jobs.append(
                 {
                     "id": link.rsplit("/", 1)[-1].split("-", 1)[0],
-                    "title": item.findtext("title"),
+                    "title": item.findtext("title", ""),
                     "company": company,
                     "location": "; ".join(cities),
                     "url": link,

@@ -17,10 +17,14 @@ def fetch(host: str, tenant: str, site: str, company: str) -> list[dict]:
     if not ids:
         return []
     body["appliedFacets"] = {"locations": ids}
-    jobs = []
+    jobs, total = [], 0
     while True:
         page = HTTP.post(url, json=body).raise_for_status().json()
+        if body["offset"] == 0:
+            total = page["total"]
         for p in page["jobPostings"]:
+            if "externalPath" not in p or "title" not in p:
+                continue
             jobs.append(
                 {
                     "id": p["externalPath"].rsplit("_", 1)[-1],
@@ -32,5 +36,5 @@ def fetch(host: str, tenant: str, site: str, company: str) -> list[dict]:
                 }
             )
         body["offset"] += 20
-        if not page["jobPostings"] or body["offset"] >= page["total"]:
+        if not page["jobPostings"] or body["offset"] >= total:
             return jobs

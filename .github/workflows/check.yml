@@ -2,6 +2,7 @@ name: check jobs
 on:
   schedule: [{ cron: "0 8 * * *" }]
   workflow_dispatch:
+permissions: { contents: read }
 concurrency: { group: check-jobs, cancel-in-progress: false }
 jobs:
   check:
@@ -16,3 +17,5 @@ jobs:
           SMTP_USER: ${{ secrets.SMTP_USER }}
           SMTP_PASS: ${{ secrets.SMTP_PASS }}
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_BASE_URL: ${{ vars.LLM_BASE_URL }}
+          LLM_MODEL: ${{ vars.LLM_MODEL }}

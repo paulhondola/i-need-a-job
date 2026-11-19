@@ -31,6 +31,10 @@ def titled_job(id: str, title: str, company: str = "Nokia") -> dict:
         "AI / Machine Learning Engineer",
         "Data Engineer (Python, SQL)",
         "Data Warehouse Engineer",
+        "Data-Warehouse Engineer",
+        "Security Audit Intern",
+        "Plant IT Working Student",
+        "Manufacturing Software Engineer",
         "Domain Controller Software Engineer",
         "Rust Systems Programmer",
         "Embedded C++ Developer",
@@ -116,13 +120,37 @@ def test_llm_filter_classifies_and_deduplicates_indices(monkeypatch):
     url, headers, payload, _ = calls[0]
     assert url == "https://api.groq.com/openai/v1/chat/completions"
     assert headers["Authorization"] == "Bearer test-key"
-    assert payload["model"] == "llama-3.3-70b-versatile"
+    assert payload["model"] == "openai/gpt-oss-120b"
     assert payload["response_format"] == {"type": "json_object"}
     assert (
         "0: [Nokia] Software Engineer Intern (Timișoara)"
         in payload["messages"][1]["content"]
     )
     assert "u1" not in payload["messages"][1]["content"]
+
+
+def test_llm_filter_empty_env_vars_fall_back_to_defaults(monkeypatch):
+    monkeypatch.setenv("LLM_API_KEY", "test-key")
+    monkeypatch.setenv("LLM_BASE_URL", "")
+    monkeypatch.setenv("LLM_MODEL", "")
+    calls = []
+
+    def fake_post(url, *, headers, json, timeout):
+        calls.append((url, json))
+        return httpx.Response(
+            200,
+            json={"choices": [{"message": {"content": '{"best": [0], "other": []}'}}]},
+            request=httpx.Request("POST", url),
+        )
+
+    monkeypatch.setattr("job_radar.filter.HTTP.post", fake_post)
+    j0 = titled_job("1", "Software Engineer Intern", "Nokia")
+    res = llm_filter([j0], "prefs")
+    assert res == {"best": [j0], "other": []}
+    assert len(calls) == 1
+    url, payload = calls[0]
+    assert url == "https://api.groq.com/openai/v1/chat/completions"
+    assert payload["model"] == "openai/gpt-oss-120b"
 
 
 def test_llm_filter_chunks_over_200_jobs(monkeypatch):
@@ -150,9 +178,7 @@ def test_llm_filter_chunks_over_200_jobs(monkeypatch):
 def test_filter_jobs_zero_survivors_skips_llm_and_preferences(tmp_path, capsys):
     j_drop = titled_job("1", "Senior HR Manager", "Nokia")
 
-    tiered, notes = filter_jobs(
-        {"Nokia": [j_drop]}, preferences_path=tmp_path / "missing.md"
-    )
+    tiered, notes = filter_jobs([j_drop], preferences_path=tmp_path / "missing.md")
     assert tiered == {"best": [], "other": []}
     assert notes == []
     assert (
@@ -164,7 +190,7 @@ def test_filter_jobs_fallback_when_api_key_missing(capsys):
     j_keep = titled_job("1", "Python Intern", "Nokia")
     j_drop = titled_job("2", "Senior HR Manager", "Nokia")
 
-    tiered, notes = filter_jobs({"Nokia": [j_keep, j_drop]})
+    tiered, notes = filter_jobs([j_keep, j_drop])
     assert tiered == {"best": [], "other": [j_keep]}
     assert len(notes) == 1
     assert notes[0].startswith("llm filter broke:")
@@ -185,7 +211,7 @@ def test_filter_jobs_fallback_on_malformed_llm_json(monkeypatch):
 
     monkeypatch.setattr("job_radar.filter.HTTP.post", fake_post)
     j_keep = titled_job("1", "Python Intern", "Nokia")
-    tiered, notes = filter_jobs({"Nokia": [j_keep]})
+    tiered, notes = filter_jobs([j_keep])
     assert tiered == {"best": [], "other": [j_keep]}
     assert len(notes) == 1
     assert notes[0].startswith("llm filter broke:")
@@ -211,10 +237,23 @@ def test_filter_jobs_fallback_on_wrong_schema_json(monkeypatch, content):
 
     monkeypatch.setattr("job_radar.filter.HTTP.post", fake_post)
     j_keep = titled_job("1", "Python Intern", "Nokia")
-    tiered, notes = filter_jobs({"Nokia": [j_keep]})
+    tiered, notes = filter_jobs([j_keep])
     assert tiered == {"best": [], "other": [j_keep]}
     assert len(notes) == 1
     assert notes[0].startswith("llm filter broke:")
+
+
+def test_filter_jobs_fallback_with_empty_exception_message_uses_class_name(monkeypatch):
+    monkeypatch.setenv("LLM_API_KEY", "test-key")
+
+    def fake_post(url, *, headers, json, timeout):
+        raise httpx.ReadTimeout("")
+
+    monkeypatch.setattr("job_radar.filter.HTTP.post", fake_post)
+    j_keep = titled_job("1", "Python Intern", "Nokia")
+    tiered, notes = filter_jobs([j_keep])
+    assert tiered == {"best": [], "other": [j_keep]}
+    assert notes == ["llm filter broke: ReadTimeout"]
 
 
 def test_default_preferences_file_exists():

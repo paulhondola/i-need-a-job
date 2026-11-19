@@ -18,11 +18,11 @@ def fetch(slug: str, company: str, tld: str = "de", job_url: str = "") -> list[d
         if any(matches_timisoara(o) for o in offices):
             jobs.append(
                 {
-                    "id": p.findtext("id"),
-                    "title": p.findtext("name"),
+                    "id": p.findtext("id", ""),
+                    "title": p.findtext("name", ""),
                     "company": company,
                     "location": "; ".join(o for o in offices if o),
-                    "url": job_url.format(id=p.findtext("id")),
+                    "url": job_url.format(id=p.findtext("id", "")),
                 }
             )
     return jobs

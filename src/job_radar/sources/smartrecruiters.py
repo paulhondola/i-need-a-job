@@ -23,7 +23,8 @@ def fetch(slug: str, company: str) -> list[dict]:
                         "title": p["name"],
                         "company": company,
                         "location": p["location"].get("fullLocation")
-                        or p["location"]["city"],
+                        or p["location"].get("city")
+                        or "Romania",
                         "url": f"https://jobs.smartrecruiters.com/{p['company']['identifier']}/{p['id']}",
                     }
                 )

@@ -15,8 +15,13 @@ def fetch(api_host: str, site: str, job_url_prefix: str, company: str) -> list[d
         page = HTTP.get(url, params=params).raise_for_status().json()["items"][0]
         rows = page["requisitionList"]
         for r in rows:
-            locations = [r["PrimaryLocation"]] + [
-                s["Name"] for s in r.get("secondaryLocations", [])
+            locations = [
+                loc
+                for loc in [
+                    r.get("PrimaryLocation"),
+                    *(s.get("Name") for s in (r.get("secondaryLocations") or [])),
+                ]
+                if loc
             ]
             if any(matches_timisoara(loc) for loc in locations):
                 jobs.append(

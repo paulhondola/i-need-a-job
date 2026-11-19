@@ -1,3 +1,4 @@
+import html
 import re
 import xml.etree.ElementTree as ET
 
@@ -16,25 +17,24 @@ def fetch(host: str, company: str) -> list[dict]:
         .raise_for_status()
         .text
     )
-    # The zero-results feed is a placeholder item, sometimes with a raw "&" (Huf) that breaks the XML parse.
-    if "<title>No jobs currently available" in feed:
-        return []
+    # SuccessFactors feeds can contain raw "&" in descriptions (e.g. Huf, EY) that break XML parsing.
+    feed = re.sub(r"&(?!(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)", "&amp;", feed)
     jobs = []
     for item in ET.fromstring(feed).iter("item"):
         title, link = (
             item.findtext("title", "").strip(),
             item.findtext("link", "").strip(),
         )
-        m = re.match(r"(.*)\((.*)\)\s*$", title)
+        m = re.match(r"(.*)\(([^()]*(?:\([^()]*\)[^()]*)*)\)\s*$", title, re.DOTALL)
         name, location = (m.group(1).strip(), m.group(2)) if m else (title, "")
-        if any(matches_timisoara(part) for part in location.split(",")):
+        if matches_timisoara(location):
             job_id = re.search(r"/(\d+)/", link)
             if job_id is None:
                 raise ValueError(f"missing job id in {link!r}")
             jobs.append(
                 {
                     "id": job_id.group(1),
-                    "title": name,
+                    "title": html.unescape(name),
                     "company": company,
                     "location": location,
                     "url": link.split("?")[0],
